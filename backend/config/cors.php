@@ -15,19 +15,19 @@ return [
     |
     */
 
-       'paths' => [
-        'api/*',
-        'sanctum/csrf-cookie',
-        'login',
-        'logout',
-        'register',
-        // You can keep '*' if you're okay with all, but this is more secure
-    ],
-
+    //    'paths' => [
+    //     'api/*',
+    //     'sanctum/csrf-cookie',
+    //     'login',
+    //     'logout',
+    //     'register',
+    //     // You can keep '*' if you're okay with all, but this is more secure
+    // ],
+    'paths' => ['*', 'api/*', 'login', 'logout', 'register',],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => [env('FRONTEND_URL', 'http://10.30.1.207:3000')],
 
     'allowed_origins_patterns' => [],
 

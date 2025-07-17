@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  fetchLoginRequests,
-  approveLoginRequest,
-  declineLoginRequest,
-  type LoginRequest,
+  fetchPrivilegeAccessRequests,
+  approvePrivilegeAccessRequest,
+  declinePrivilegeAccessRequest,
+  type PrivilegeAccessRequest,
 } from '@/lib/login-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,32 +18,28 @@ import {
   TableHead,
 } from '@/components/ui/table';
 import { toast } from 'react-toastify';
-
-import { mockLoginRequests } from '@/lib/mock-data';
-
-// Replace this function for now
+import {api} from '@/lib/axios'; // your configured axios
 
 export default function AccessRequestPage() {
-  const [requests, setRequests] = useState<LoginRequest[]>([]);
+  const [requests, setRequests] = useState<PrivilegeAccessRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
-//   const loadRequests = async () => {
-//     setLoading(true);
-//     try {
-//       const data = await fetchLoginRequests();
-//       setRequests(data);
-//     } catch {
-//       toast.error('Failed to fetch requests');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  const checkAuth = async () => {
+    try {
+      const res = await api.get('/user');
+      console.log('Logged in user:', res.data);
+    } catch (err) {
+      toast.error('Not authenticated');
+    }
+  };
 
-const loadRequests = async () => {
+  const loadRequests = async () => {
     setLoading(true);
     try {
-      const data = mockLoginRequests;
+      const data = await fetchPrivilegeAccessRequests();
       setRequests(data);
+    } catch {
+      toast.error('Failed to fetch requests');
     } finally {
       setLoading(false);
     }
@@ -51,7 +47,7 @@ const loadRequests = async () => {
 
   const handleApprove = async (id: number) => {
     try {
-      await approveLoginRequest(id);
+      await approvePrivilegeAccessRequest(id);
       toast.success('Approved');
       loadRequests();
     } catch {
@@ -61,7 +57,7 @@ const loadRequests = async () => {
 
   const handleDecline = async (id: number) => {
     try {
-      await declineLoginRequest(id);
+      await declinePrivilegeAccessRequest(id);
       toast.info('Declined');
       loadRequests();
     } catch {
@@ -70,7 +66,8 @@ const loadRequests = async () => {
   };
 
   useEffect(() => {
-    loadRequests();
+    checkAuth();     // <-- check if authenticated
+    loadRequests();  // <-- then load login requests
   }, []);
 
   return (
@@ -97,8 +94,8 @@ const loadRequests = async () => {
             ) : (
               requests.map((req) => (
                 <TableRow key={req.id}>
-                  <TableCell className="font-medium">{req.user}</TableCell>
-                  <TableCell>{req.reason}</TableCell>
+                  <TableCell className="font-medium">{req.email}</TableCell>
+                  <TableCell>{req.reason ?? 'N/A'}</TableCell>
                   <TableCell className="capitalize">{req.status}</TableCell>
                   <TableCell>{new Date(req.created_at).toLocaleString()}</TableCell>
                   <TableCell className="space-x-2">
