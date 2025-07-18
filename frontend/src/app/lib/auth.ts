@@ -8,12 +8,12 @@ export async function getCsrfCookie(): Promise<void> {
 
 export async function login(data: LoginData): Promise<AxiosResponse> {
   await getCsrfCookie();
-  return backend.post('/login', data);
+  return api.post('/login', data);
 }
 
 export async function register(data: RegisterData): Promise<AxiosResponse> {
   await getCsrfCookie();
-  return backend.post('/register', data);
+  return api.post('/register', data);
 }
 
 export async function getUser(): Promise<AxiosResponse<User>> {
@@ -21,5 +21,5 @@ export async function getUser(): Promise<AxiosResponse<User>> {
 }
 
 export async function logout(): Promise<AxiosResponse> {
-  return backend.post('/logout');
+  return api.post('/logout');
 }
