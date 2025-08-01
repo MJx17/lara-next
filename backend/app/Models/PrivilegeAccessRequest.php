@@ -10,8 +10,8 @@ use Illuminate\Support\Str;
 class PrivilegeAccessRequest extends Model
 {
     protected $fillable = [
-        'requestor_username',  // added requestor username
-        'user_id',             // grantor/admin user
+        'requestor_username',
+        'user_id',
         'reason',
         'status',
         'type',
@@ -41,4 +41,19 @@ class PrivilegeAccessRequest extends Model
     {
         return $this->hasMany(PrivilegeAccessLog::class);
     }
+
+    /**
+     * Determine if the request is expired (older than 15 minutes).
+     */
+    public function isExpired(): bool
+    {
+        return now()->diffInMinutes($this->created_at) > 15;
+    }
+
+    public function scopeActive($query)
+{
+    return $query->where('status', 'pending')
+                 ->where('created_at', '>=', now()->subMinutes(15));
+}
+
 }

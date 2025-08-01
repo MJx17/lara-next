@@ -1,3 +1,7 @@
+"use client"
+
+import { useEffect, useState } from "react"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
@@ -8,9 +12,28 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar"
 
-import data from "./data.json"
+import { fetchPrivilegeAccessRequests } from "@/lib/login-request" // ← adjust if needed
+import type { PrivilegeAccessRequest } from "@/lib/login-request"
 
 export default function Page() {
+  const [data, setData] = useState<PrivilegeAccessRequest[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const response = await fetchPrivilegeAccessRequests()
+        setData(response)
+      } catch (error) {
+        console.error("Failed to load data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
   return (
     <SidebarProvider
       style={
@@ -30,7 +53,11 @@ export default function Page() {
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
-              <DataTable data={data} />
+              {loading ? (
+                <div className="text-center py-6 text-muted-foreground">Loading...</div>
+              ) : (
+                <DataTable data={data} />
+              )}
             </div>
           </div>
         </div>

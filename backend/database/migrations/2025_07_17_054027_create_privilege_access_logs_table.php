@@ -27,8 +27,10 @@ return new class extends Migration {
             $table->string('reason')->nullable();
             $table->string('status')->nullable();
 
-            $table->string('requestor_username')->nullable();  // <-- added
+            $table->string('requestor_username')->nullable();
 
+            // ✅ New Teams metadata column
+        
             $table->timestamps();
         });
     }

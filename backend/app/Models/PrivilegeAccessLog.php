@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PrivilegeAccessLog extends Model
-{
+{   
+
+
     protected $fillable = [
         'privilege_access_request_id',
         'request_uuid',

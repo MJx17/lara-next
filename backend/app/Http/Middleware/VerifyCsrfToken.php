@@ -1,32 +1,19 @@
 <?php
 
-namespace App\Models;
+namespace App\Http\Middleware;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // ✅ Add this
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as Middleware;
 
-class User extends Authenticatable
+class VerifyCsrfToken extends Middleware
 {
-    use HasApiTokens, HasFactory, Notifiable; // ✅ Add HasApiTokens here
-
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
+    /**
+     * The URIs that should be excluded from CSRF verification.
+     *
+     * @var array<int, string>
+     */
+    protected $except = [
+        'privilege-requests/*/approve-teams',
+        'privilege-requests/*/decline-teams',
+        // add other routes you want to exclude here
     ];
-
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
 }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  fetchPrivilegeAccessRequests,
+  fetchActivePrivilegeAccessRequests,
   approvePrivilegeAccessRequest,
   declinePrivilegeAccessRequest,
   type PrivilegeAccessRequest,
@@ -34,7 +34,7 @@ export default function AccessRequestPage() {
   const [loading, setLoading] = useState(false);
 
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+
 
   const checkAuth = async () => {
     try {
@@ -48,7 +48,7 @@ export default function AccessRequestPage() {
   const loadRequests = async () => {
     setLoading(true);
     try {
-      const data = await fetchPrivilegeAccessRequests();
+      const data = await fetchActivePrivilegeAccessRequests();
       setRequests(data);
       setFiltered(data);
     } catch {
@@ -58,9 +58,16 @@ export default function AccessRequestPage() {
     }
   };
 
-  const handleApprove = async (id: number) => {
+  const handleApprove = async (req: PrivilegeAccessRequest) => {
     try {
-      await approvePrivilegeAccessRequest(id);
+      await approvePrivilegeAccessRequest(req.request_uuid, {
+        type: req.type,
+        reason: req.reason,
+        requestor_username: req.requestor_username,
+        host: req.hostname,
+        ip: req.ip_address,
+        timestamp: req.created_at,
+      });
       toast.success('Approved');
       loadRequests();
     } catch {
@@ -68,15 +75,24 @@ export default function AccessRequestPage() {
     }
   };
 
-  const handleDecline = async (id: number) => {
+  const handleDecline = async (req: PrivilegeAccessRequest) => {
     try {
-      await declinePrivilegeAccessRequest(id);
+      await declinePrivilegeAccessRequest(req.request_uuid, {
+        type: req.type,
+        reason: req.reason,
+        requestor_username: req.requestor_username,
+        host: req.hostname,
+        ip: req.ip_address,
+        timestamp: req.created_at,
+      });
       toast.info('Declined');
       loadRequests();
     } catch {
       toast.error('Decline failed');
     }
   };
+
+
 
   const applyFilters = () => {
     let filteredData = [...requests];
@@ -85,9 +101,6 @@ export default function AccessRequestPage() {
       filteredData = filteredData.filter((req) => req.type === typeFilter);
     }
 
-    if (statusFilter !== 'all') {
-      filteredData = filteredData.filter((req) => req.status === statusFilter);
-    }
 
     setFiltered(filteredData);
   };
@@ -99,7 +112,7 @@ export default function AccessRequestPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [typeFilter, statusFilter, requests]);
+  }, [typeFilter, requests]);
 
   return (
     <Card className="mt-10 p-4">
@@ -118,17 +131,7 @@ export default function AccessRequestPage() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-              </SelectContent>
-            </Select>
+
           </div>
         </div>
 
@@ -172,32 +175,20 @@ export default function AccessRequestPage() {
                   <TableCell title={req.reason}>
                     <div className="truncate max-w-[150px]">{req.reason ?? 'N/A'}</div>
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      defaultValue={
-                        req.status === 'approved'
-                          ? 'success'
-                          : req.status === 'declined'
-                            ? 'destructive'
-                            : 'secondary'
-                      }
-                    >
-                      {req.status}
-                    </Badge>
-                  </TableCell>
+
                   <TableCell>{req.hostname ?? 'N/A'}</TableCell>
                   <TableCell>{req.ip_address ?? 'N/A'}</TableCell>
                   <TableCell>{new Date(req.created_at).toLocaleString()}</TableCell>
                   <TableCell className="space-x-2">
                     <Button
-                      onClick={() => handleApprove(req.id)}
+                      onClick={() => handleApprove(req)}
                       disabled={req.status !== 'pending'}
                     >
                       Approve
                     </Button>
                     <Button
                       variant="destructive"
-                      onClick={() => handleDecline(req.id)}
+                      onClick={() => handleDecline(req)}
                       disabled={req.status !== 'pending'}
                     >
                       Decline

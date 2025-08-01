@@ -13,7 +13,14 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
-
+    'telegram' => [
+    'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+    'chat_id' => env('TELEGRAM_CHAT_ID'),
+    ],
+    'teams' => [
+        'webhook_url' => env('TEAMS_WEBHOOK_URL'),
+        'logic_app_url' => env('TEAMS_LOGIC_APP_URL'),
+    ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],

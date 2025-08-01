@@ -1,4 +1,4 @@
-import {api, backend} from './axios';
+import { api, backend } from './axios';
 
 export interface PrivilegeAccessUser {
   id: number;
@@ -15,6 +15,7 @@ export interface PrivilegeAccessLog {
   ip_address: string;
   status: string;
   created_at: string;
+  request_uuid: string;
 }
 
 export interface PrivilegeAccessRequest {
@@ -27,11 +28,12 @@ export interface PrivilegeAccessRequest {
   hostname: string;
   ip_address: string;
   requestor_username: string;
-  status: 'pending' | 'approved' | 'declined';
+  status: 'pending' | 'approved' | 'declined' | 'expired';
   created_at: string;
   updated_at: string;
   logs: PrivilegeAccessLog[];
 }
+
 
 
 // GET /privilege-requests
@@ -46,15 +48,39 @@ export async function createPrivilegeAccessRequest(email: string, reason: string
   return response.data;
 }
 
+
 // POST /privilege-requests/{id}/approve
-export async function approvePrivilegeAccessRequest(id: number): Promise<void> {
-  await api.post(`/privilege-requests/${id}/approve`);
+export async function approvePrivilegeAccessRequest(
+  request_uuid: string,
+  payload: {
+    type: string;
+    reason: string;
+    requestor_username: string;
+    host: string;
+    ip: string;
+    timestamp: string;
+  }
+): Promise<void> {
+  const uuid = request_uuid;
+  await api.post(`/privilege-requests/${uuid}/approve`, payload);
 }
 
-// POST /privilege-requests/{id}/decline
-export async function declinePrivilegeAccessRequest(id: number): Promise<void> {
-  await api.post(`/privilege-requests/${id}/decline`);
+export async function declinePrivilegeAccessRequest(
+  request_uuid: string,
+  payload: {
+    type: string;
+    reason: string;
+    requestor_username: string;
+    host: string;
+    ip: string;
+    timestamp: string;
+  }
+): Promise<void> {
+  const uuid = request_uuid;
+  await api.post(`/privilege-requests/${uuid}/decline`, payload);
 }
+
+
 
 // GET /privilege-requests/latest
 export async function fetchLatestPrivilegeAccessRequest(): Promise<PrivilegeAccessRequest | null> {
@@ -67,3 +93,10 @@ export async function fetchPrivilegeAccessLogs(id: number): Promise<PrivilegeAcc
   const response = await api.get(`/privilege-requests/${id}/logs`);
   return response.data;
 }
+
+// GET /privilege-requests/active
+export async function fetchActivePrivilegeAccessRequests(): Promise<PrivilegeAccessRequest[]> {
+  const response = await api.get('/privilege-requests/active');
+  return response.data;
+}
+
