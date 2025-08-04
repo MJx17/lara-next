@@ -9,18 +9,22 @@ class PrivilegeAccessLog extends Model
 {   
 
 
-    protected $fillable = [
-        'privilege_access_request_id',
-        'request_uuid',
-        'actor_id',
-        'action',
-        'type', // e.g. ssh, sftp, rdp
-        'hostname',
-        'ip_address',
-        'reason',
-        'status',
-        'requestor_username',  // <-- added here
+  protected $fillable = [
+    'privilege_access_request_id',
+    'request_uuid',
+    'actor_id',
+    'action',
+    'type',
+    'hostname',
+    'host_ip',
+    'requestor_ip',
+    'reason',
+    'status',
+    'requestor_username',
+    'requestor_fullname',
+    'system_name',
     ];
+
 
     public function request(): BelongsTo
     {

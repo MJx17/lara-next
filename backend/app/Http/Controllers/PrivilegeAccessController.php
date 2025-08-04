@@ -6,21 +6,16 @@ use App\Models\PrivilegeAccessRequest;
 use App\Models\PrivilegeAccessLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\PrivilegeAccessTeamsController;
 
 class PrivilegeAccessController extends Controller
 {
     public function index(Request $request)
     {
-        $query = PrivilegeAccessRequest::with(['user', 'logs'])->orderByDesc('created_at');
+        $query = PrivilegeAccessRequest::with('user')->orderByDesc('created_at');
 
         $filters = [
-            'type',
-            'user_id',
-            'hostname',
-            'ip_address',
-            'requestor_username',
-            'status'
+            'type', 'user_id', 'hostname', 'requestor_ip', 'host_ip',
+            'requestor_username', 'requestor_fullname', 'system_name', 'status',
         ];
 
         foreach ($filters as $field) {
@@ -30,139 +25,99 @@ class PrivilegeAccessController extends Controller
         }
 
         return $query->get([
-            'id',
-            'request_uuid',
-            'type',
-            'user_id',
-            'reason',
-            'status',
-            'hostname',
-            'ip_address',
-            'requestor_username',
-            'created_at',
-            'updated_at',
+            'id', 'request_uuid', 'type', 'user_id', 'reason', 'status',
+            'hostname', 'requestor_ip', 'host_ip',
+            'requestor_username', 'requestor_fullname', 'system_name',
+            'created_at', 'updated_at',
         ]);
     }
 
-    // GET /api/requests/active
-    public function active()
+    public function fetchAllLogs(Request $request)
     {
-        return PrivilegeAccessRequest::active()
-            ->with(['user', 'logs'])
-            ->orderByDesc('created_at')
-            ->get([
-                'id',
-                'request_uuid',
-                'type',
-                'user_id',
-                'reason',
-                'status',
-                'hostname',
-                'ip_address',
-                'requestor_username',
-                'created_at',
-                'updated_at',
-            ]);
+        $query = PrivilegeAccessLog::with('request')->orderByDesc('created_at');
+
+        $filters = [
+            'privilege_access_request_id', 'request_uuid', 'actor_id', 'status', 'created_at',
+        ];
+
+        foreach ($filters as $field) {
+            if ($request->filled($field)) {
+                if ($field === 'request_uuid') {
+                    $query->where('request_uuid', $request->request_uuid);
+                } else {
+                    $query->where($field, $request->$field);
+                }
+            }
+        }
+
+        return $query->get([
+            'id', 'privilege_access_request_id', 'status', 'actor_id',
+            'action', 'created_at',
+        ]);
     }
 
-
-
-    // Old -v without teams 
-    // public function store(Request $request)
-    // {
-    //     $validated = $request->validate([
-    //         'type'               => 'required|string',
-    //         'reason'             => 'required|string|max:255',
-    //         'requestor_username' => 'required|string',
-    //         'host'               => 'required|string',
-    //         'ip'                 => 'required|ip',
-    //         'timestamp'          => 'required|date',
-    //     ]);
-
-    //     $userId = Auth::id();
-
-    //     $accessRequest = PrivilegeAccessRequest::create([
-    //         'type'               => $validated['type'],
-    //         'user_id'            => $userId,
-    //         'reason'             => $validated['reason'],
-    //         'hostname'           => $validated['host'],
-    //         'ip_address'         => $validated['ip'],
-    //         'created_at'         => $validated['timestamp'],
-    //         'requestor_username' => $validated['requestor_username'],
-    //     ]);
-
-    //     PrivilegeAccessLog::create([
-    //         'privilege_access_request_id' => $accessRequest->id,
-    //         'request_uuid'        => $accessRequest->request_uuid,
-    //         'actor_id'            => $userId,
-    //         'action'              => 'submitted',
-    //         'type'                => $validated['type'],
-    //         'hostname'            => $validated['host'],
-    //         'ip_address'          => $validated['ip'],
-    //         'reason'              => $validated['reason'],
-    //         'status'              => 'pending',
-    //         'requestor_username'  => $validated['requestor_username'],
-    //         'created_at'          => $validated['timestamp'],
-    //     ]);
-
-    //     return response()->json([
-    //         'message' => 'Request submitted',
-    //         'request_uuid' => $accessRequest->request_uuid,
-    //     ], 201);
-    // }
-
-
-
-
     public function store(Request $request)
-        {
+    {
+        try {
             $validated = $request->validate([
                 'type'               => 'required|string',
                 'reason'             => 'required|string|max:255',
                 'requestor_username' => 'required|string',
                 'host'               => 'required|string',
-                'ip'                 => 'required|ip',
+                'requestor_ip'       => 'required|ip',
+                'host_ip'            => 'required|ip',
                 'timestamp'          => 'required|date',
+                'requestor_fullname' => 'required|string|max:255',
+                'system_name'        => 'required|string|max:255',
             ]);
-
-            $userId = Auth::id();
 
             $accessRequest = PrivilegeAccessRequest::create([
                 'type'               => $validated['type'],
-                'user_id'            => $userId,
+                'user_id'            => Auth::id(),
                 'reason'             => $validated['reason'],
                 'hostname'           => $validated['host'],
-                'ip_address'         => $validated['ip'],
+                'ip_address'         => $validated['host_ip'],
+                'requestor_ip'       => $validated['requestor_ip'],
+                'host_ip'            => $validated['host_ip'],
                 'created_at'         => $validated['timestamp'],
                 'requestor_username' => $validated['requestor_username'],
+                'requestor_fullname' => $validated['requestor_fullname'],
+                'system_name'        => $validated['system_name'],
             ]);
 
             PrivilegeAccessLog::create([
                 'privilege_access_request_id' => $accessRequest->id,
                 'request_uuid'                => $accessRequest->request_uuid,
-                'actor_id'                    => $userId,
                 'action'                      => 'submitted',
                 'type'                        => $validated['type'],
                 'hostname'                    => $validated['host'],
-                'ip_address'                  => $validated['ip'],
+                'host_ip'                     => $validated['host_ip'],
+                'ip_address'                  => $validated['host_ip'],
+                'requestor_ip'                => $validated['requestor_ip'],
                 'reason'                      => $validated['reason'],
-                'status'                      => 'pending',
                 'requestor_username'          => $validated['requestor_username'],
+                'requestor_fullname'          => $validated['requestor_fullname'],
+                'system_name'                 => $validated['system_name'],
                 'created_at'                  => $validated['timestamp'],
+                'status'                      => 'pending',
+                'actor_id'                    => null,
             ]);
 
-            // ✅ Properly call the Teams controller using Laravel's service container
-            app(PrivilegeAccessTeamsController::class)->sendToLogicApp($accessRequest);
+            return response()->json([
+                'message'       => 'Request submitted and notification sent',
+                'request_uuid'  => $accessRequest->request_uuid,
+            ], 201);
+        } catch (\Throwable $e) {
+            \Log::error('PrivilegeAccessRequest Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
-                'message' => 'Request submitted and notification sent',
-                'request_uuid' => $accessRequest->request_uuid,
-            ], 201);
+                'error'   => 'Server error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
-
-
-
-
 
     public function getStatusByUuid($uuid)
     {
@@ -171,192 +126,22 @@ class PrivilegeAccessController extends Controller
             ->firstOrFail();
 
         return response()->json([
-            'status'     => $request->status,
             'logs'       => $request->logs,
             'updated_at' => $request->updated_at,
         ]);
     }
 
-    public function approveByUuid(Request $request, $uuid)
+    public function active()
     {
-        return $this->processApproval($request, $uuid, 'approved');
-    }
+        $requests = PrivilegeAccessRequest::where('status', 'pending')
+            ->where(function ($q) {
+                $q->where('created_at', '>=', now()->subMinutes(5))
+                  ->orWhereNull('created_at');
+            })
+            ->orderByDesc('created_at')
+            ->get();
 
-    public function declineByUuid(Request $request, $uuid)
-    {
-        return $this->processApproval($request, $uuid, 'declined');
-    }
-
-    //Old v -without teams
-
-//    private function processApproval(Request $request, $uuid, string $status)
-// {
-//     $validated = $request->validate([
-//         'host'      => 'required|string',
-//         'ip'        => 'required|ip',
-//         'timestamp' => 'required|date',
-//         'reason'    => 'nullable|string|max:255',
-//     ]);
-
-//     $accessRequest = PrivilegeAccessRequest::where('request_uuid', $uuid)->firstOrFail();
-
-//     if ($accessRequest->status !== 'pending') {
-//         return response()->json([
-//             'message' => "Request has already been {$accessRequest->status}.",
-//         ], 400);
-//     }
-
-//     // ⛔ Check if the request is expired
-//     if ($accessRequest->isExpired()) {
-//         return response()->json([
-//             'message' => 'Request has expired.',
-//         ], 403);
-//     }
-
-//     $accessRequest->update([
-//         'status'     => $status,
-//         'updated_at' => $validated['timestamp'],
-//     ]);
-
-//     try {
-//         PrivilegeAccessLog::create([
-//             'privilege_access_request_id' => $accessRequest->id,
-//             'request_uuid'        => $accessRequest->request_uuid,
-//             'actor_id'            => Auth::id(),
-//             'action'              => $status,
-//             'type'                => $accessRequest->type,
-//             'hostname'            => $validated['host'],
-//             'ip_address'          => $validated['ip'],
-//             'status'              => $status,
-//             'reason'              => $validated['reason'],
-//             'requestor_username'  => $accessRequest->requestor_username,
-//             'created_at'          => $validated['timestamp'],
-//         ]);
-//     } catch (\Throwable $e) {
-//         return response()->json([
-//             'message' => 'Log creation failed',
-//             'error'   => $e->getMessage(),
-//         ], 500);
-//     }
-
-//     return response()->json([
-//         'message' => ucfirst($status),
-//     ]);
-// }
-
-    // Teams link approval (no Auth, GET)
-
-
-        // public function approveByUuidTeams($uuid)
-        // {
-        //     $fakeRequest = new Request([
-        //         'host'      => gethostname() ?? 'unknown',
-        //         'ip'        => request()->ip() ?? 'unknown',
-        //         'timestamp' => now()->toDateTimeString(),
-        //         'reason'    => 'Approved via Teams link',
-        //     ]);
-
-        //     return $this->processApproval($fakeRequest, $uuid, 'approved', 2);
-        // }
-
-        // public function declineByUuidTeams($uuid)
-        // {
-        //     $fakeRequest = new Request([
-        //         'host'      => gethostname() ?? 'unknown',
-        //         'ip'        => request()->ip() ?? 'unknown',
-        //         'timestamp' => now()->toDateTimeString(),
-        //         'reason'    => 'Declined via Teams link',
-        //     ]);
-
-        //     return $this->processApproval($fakeRequest, $uuid, 'declined', 2);
-        // }
-
-    //Latest -v 
-    /**
-     * Core approval logic, with optional actorId override
-     */
-    // private function processApproval(Request $request, $uuid, string $status, $actorId = null)
-    // {
-    //     // Validate input - require host, ip, timestamp, reason optional
-    //     $validated = $request->validate([
-    //         'host'      => 'required|string',
-    //         'ip'        => 'required|ip',
-    //         'timestamp' => 'required|date',
-    //         'reason'    => 'nullable|string|max:255',
-    //     ]);
-
-    //     $accessRequest = PrivilegeAccessRequest::where('request_uuid', $uuid)->firstOrFail();
-
-    //     if ($accessRequest->status !== 'pending') {
-    //         return response()->json([
-    //             'message' => "Request has already been {$accessRequest->status}.",
-    //         ], 400);
-    //     }
-
-    //     // Check if request expired (your method)
-    //     if ($accessRequest->isExpired()) {
-    //         return response()->json([
-    //             'message' => 'Request has expired.',
-    //         ], 403);
-    //     }
-
-    //     $accessRequest->update([
-    //         'status'     => $status,
-    //         'updated_at' => $validated['timestamp'],
-    //     ]);
-
-    //     try {
-    //         PrivilegeAccessLog::create([
-    //             'privilege_access_request_id' => $accessRequest->id,
-    //             'request_uuid'                => $accessRequest->request_uuid,
-    //             // Use actorId if provided, else fallback to Auth
-    //             'actor_id'                   => $actorId ?? Auth::id(),
-    //             'action'                     => $status,
-    //             'type'                       => $accessRequest->type,
-    //             'hostname'                   => $validated['host'],
-    //             'ip_address'                 => $validated['ip'],
-    //             'status'                     => $status,
-    //             'reason'                     => $validated['reason'],
-    //             'requestor_username'         => $accessRequest->requestor_username,
-    //             'created_at'                 => $validated['timestamp'],
-    //         ]);
-    //     } catch (\Throwable $e) {
-    //         return response()->json([
-    //             'message' => 'Log creation failed',
-    //             'error'   => $e->getMessage(),
-    //         ], 500);
-    //     }
-
-    //     return response()->json([
-    //         'message' => ucfirst($status),
-    //     ]);
-    // }
-
-
-    public function approveByUuidTeams(Request $request, $uuid)
-    {
-        $metadata = [
-            'host'          => gethostname() ?? 'unknown',
-            'ip'            => $request->ip() ?? 'unknown',
-            'timestamp'     => $request->input('clicked_at') ?? now()->toDateTimeString(),
-            'reason'        => 'Approved via Teams',
-            'teams_payload' => $request->all(), // full Teams data
-        ];
-
-        return $this->processApproval(new Request($metadata), $uuid, 'approved');
-    }
-
-    public function declineByUuidTeams(Request $request, $uuid)
-    {
-        $metadata = [
-            'host'          => gethostname() ?? 'unknown',
-            'ip'            => $request->ip() ?? 'unknown',
-            'timestamp'     => $request->input('clicked_at') ?? now()->toDateTimeString(),
-            'reason'        => 'Declined via Teams',
-            'teams_payload' => $request->all(),
-        ];
-
-        return $this->processApproval(new Request($metadata), $uuid, 'declined');
+        return response()->json($requests);
     }
 
     private function processApproval(Request $request, $uuid, string $status)
@@ -370,49 +155,49 @@ class PrivilegeAccessController extends Controller
         }
 
         if ($accessRequest->isExpired()) {
-            return response()->json(['message' => 'Request expired.'], 403);
+            $accessRequest->update([
+                'status'     => 'expired',
+                'updated_at' => now(),
+            ]);
+
+            PrivilegeAccessLog::where('request_uuid', $uuid)
+                ->where('action', 'submitted')
+                ->where('status', 'pending')
+                ->first()?->update([
+                    'status'     => 'expired',
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json(['message' => 'Request expired.'], 410);
         }
 
-        $validated = $request->validate([
-            'host'          => 'nullable|string',
-            'ip'            => 'nullable|ip',
-            'timestamp'     => 'nullable|date',
-            'reason'        => 'nullable|string|max:255',
-            'teams_payload' => 'nullable|array',
-        ]);
-
-        // Update main request
         $accessRequest->update([
             'status'     => $status,
             'updated_at' => now(),
         ]);
 
-        // Log the action
-        PrivilegeAccessLog::create([
-            'privilege_access_request_id' => $accessRequest->id,
-            'request_uuid'                => $accessRequest->request_uuid,
-            'actor_id'                    => Auth::id(), // null if unauthenticated (e.g., from Teams)
-            'action'                      => $status,
-            'type'                        => $accessRequest->type,
-            'hostname'                    => $validated['host'] ?? null,
-            'ip_address'                  => $validated['ip'] ?? $request->ip(),
-            'status'                      => $status,
-            'reason'                      => $validated['reason'] ?? null,
-            'requestor_username'          => $accessRequest->requestor_username,
-            'teams_payload'               => $validated['teams_payload'] ?? null,
-            'created_at'                  => $validated['timestamp'] ?? now(),
-        ]);
+        PrivilegeAccessLog::where('request_uuid', $uuid)
+            ->where('action', 'submitted')
+            ->where('status', 'pending')
+            ->first()?->update([
+                'actor_id'   => auth()->id(),
+                'action'     => $status,
+                'status'     => $status,
+                'updated_at' => now(),
+            ]);
 
-        return response()->json(['message' => ucfirst($status) . ' successfully']);
+        return response()->json([
+            'message' => ucfirst($status) . ' successfully.'
+        ]);
     }
 
-
-
-
-    public function latestForUser()
+    public function approveByUuid(Request $request, $uuid)
     {
-        return PrivilegeAccessRequest::where('user_id', Auth::id())
-            ->latest()
-            ->first();
+        return $this->processApproval($request, $uuid, 'approved');
+    }
+
+    public function declineByUuid(Request $request, $uuid)
+    {
+        return $this->processApproval($request, $uuid, 'declined');
     }
 }

@@ -9,8 +9,4 @@ Route::get('/', function () {
 });
 
 
-Route::get('/privilege-requests/{uuid}/approve-teams', [PrivilegeAccessController::class, 'approveByUuidTeams'])
-    ->name('privilege.approve-teams');
 
-Route::get('/privilege-requests/{uuid}/decline-teams', [PrivilegeAccessController::class, 'declineByUuidTeams'])
-    ->name('privilege.decline-teams');

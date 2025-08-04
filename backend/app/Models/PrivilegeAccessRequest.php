@@ -10,15 +10,19 @@ use Illuminate\Support\Str;
 class PrivilegeAccessRequest extends Model
 {
     protected $fillable = [
+        'request_uuid',
         'requestor_username',
+        'requestor_fullname',
+        'system_name',
         'user_id',
         'reason',
         'status',
         'type',
         'hostname',
-        'ip_address',
-        'request_uuid',
+        'host_ip',
+        'requestor_ip',
     ];
+
 
     protected static function boot()
     {
